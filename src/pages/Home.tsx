@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { useCourses } from '@/context/CourseContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -7,7 +8,19 @@ import { ArrowRight, BookOpen, Users, Award, CheckCircle } from 'lucide-react';
 
 const Home: React.FC = () => {
     const { courses } = useCourses();
+    const { openLoginModal } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    React.useEffect(() => {
+        if (location.state?.openLogin) {
+            // Check if a specific view was requested (default to login if not specified)
+            const view = location.state.view || 'login';
+            openLoginModal(view);
+            // Clear the state so it doesn't reopen on refresh or simple re-renders
+            window.history.replaceState({}, document.title);
+        }
+    }, [location, openLoginModal]);
 
     // Get top 3 featured courses (mock logic: just take first 3)
     const featuredCourses = courses.slice(0, 3);
@@ -43,19 +56,19 @@ const Home: React.FC = () => {
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                                    <Link
-                                        to="/register"
+                                    <button
+                                        onClick={() => openLoginModal('register')}
                                         className="w-full sm:w-auto px-8 py-4 bg-secondary text-secondary-foreground rounded-xl font-bold hover:bg-secondary/90 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
                                     >
                                         Start Learning Now
                                         <ArrowRight className="w-5 h-5" />
-                                    </Link>
-                                    <Link
-                                        to="/login"
+                                    </button>
+                                    <button
+                                        onClick={() => openLoginModal('login')}
                                         className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
                                     >
                                         Log In
-                                    </Link>
+                                    </button>
                                 </div>
                             </div>
 
@@ -233,13 +246,13 @@ const Home: React.FC = () => {
                                 <p className="text-white/80 text-lg mb-8">
                                     Join thousands of healthcare professionals already learning on NPHI. Registration is free and takes less than a minute.
                                 </p>
-                                <Link
-                                    to="/register"
+                                <button
+                                    onClick={() => openLoginModal('register')}
                                     className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary rounded-xl font-bold hover:bg-white/90 transition-all shadow-lg transform hover:scale-105"
                                 >
                                     Create Free Account
                                     <ArrowRight className="w-5 h-5" />
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -249,6 +262,7 @@ const Home: React.FC = () => {
             <Footer />
         </div>
     );
+
 };
 
 export default Home;

@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  ArrowRight
+  ArrowRight,
+  ChevronRight
 } from 'lucide-react';
 import { Module, QuizQuestion } from '@/types/lms';
 
@@ -104,7 +105,7 @@ const parsePptModuleContent = (content?: string): { fileUrl: string; slideRange:
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, effectiveRole, updateUserProgress, completeCourse } = useAuth();
+  const { user, effectiveRole, updateUserProgress, completeCourse, openLoginModal } = useAuth();
   const { getCourseById } = useCourses();
 
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
@@ -117,6 +118,95 @@ const CourseDetail: React.FC = () => {
   const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [assignmentFileUploading, setAssignmentFileUploading] = useState(false);
   const [assignmentSavedAt, setAssignmentSavedAt] = useState<string | null>(null);
+
+  // --- Word Content Extraction & Editing State ---
+  const [wordHtml, setWordHtml] = useState<string | null>(null);
+  const [isEditingWord, setIsEditingWord] = useState(false);
+  const [editorContent, setEditorContent] = useState('');
+  const [isSavingWord, setIsSavingWord] = useState(false);
+
+  // --- Pagination & Trivia State ---
+  const [viewMode, setViewMode] = useState<'reader' | 'trivia'>('reader');
+  const [pages, setPages] = useState<string[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [triviaCards, setTriviaCards] = useState<{ question: string; answer: string }[]>([]);
+  const [currentTriviaIndex, setCurrentTriviaIndex] = useState(0);
+  const [showTriviaAnswer, setShowTriviaAnswer] = useState(false);
+
+  // Process Word HTML into Pages and Trivia
+  useEffect(() => {
+    if (!wordHtml) return;
+
+    // 1. Pagination Logic
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(wordHtml, 'text/html');
+    const nodes = Array.from(doc.body.childNodes);
+    const newPages: string[] = [];
+    let currentPageContent: Node[] = [];
+    let currentLength = 0;
+    const MAX_PAGE_LENGTH = 1500; // split roughly every 1500 characters
+
+    nodes.forEach((node) => {
+      const isHeader = node.nodeName.match(/^H[1-6]$/);
+      const nodeLength = node.textContent?.length || 0;
+
+      // Start new page if we hit a header AND we have enough content, OR if page is just too long
+      if ((isHeader || currentLength > MAX_PAGE_LENGTH) && currentPageContent.length > 0) {
+        const div = document.createElement('div');
+        currentPageContent.forEach(n => div.appendChild(n.cloneNode(true)));
+        newPages.push(div.innerHTML);
+        currentPageContent = [];
+        currentLength = 0;
+      }
+      currentPageContent.push(node);
+      currentLength += nodeLength;
+    });
+
+    // Push remaining
+    if (currentPageContent.length > 0) {
+      const div = document.createElement('div');
+      currentPageContent.forEach(n => div.appendChild(n.cloneNode(true)));
+      newPages.push(div.innerHTML);
+    }
+    setPages(newPages.length > 0 ? newPages : [wordHtml]);
+    setPageIndex(0); // Reset to page 1
+
+    // 2. Trivia Extraction Logic
+    // Pattern: Look for paragraphs containing "Question" and extract generic Q&A
+    const extractedTrivia: { question: string; answer: string }[] = [];
+    // Only text based analysis for now
+    const textBlocks = Array.from(doc.body.querySelectorAll('p, li, blockquote'));
+
+    for (let i = 0; i < textBlocks.length; i++) {
+      const text = textBlocks[i].textContent || "";
+      // Simple heuristic: Line starts with "Question" or "Q:"
+      if (text.match(/^(Question|Q\s*[:\-])/i) || textBlocks[i].querySelector('strong')?.textContent?.match(/Question/i)) {
+        const questionText = text; // or strip "Question:" prefix
+        // Look ahead for "Answer"
+        let answerText = "Answer not found in document structure.";
+
+        // Try next few siblings for "Answer"
+        for (let j = 1; j <= 3; j++) {
+          if (i + j < textBlocks.length) {
+            const nextText = textBlocks[i + j].textContent || "";
+            if (nextText.match(/^(Answer|A\s*[:\-])/i) || textBlocks[i + j].querySelector('strong')?.textContent?.match(/Answer/i)) {
+              answerText = textBlocks[i + j].innerHTML;
+              i += j; // Skip this line in main loop
+              break;
+            }
+          }
+        }
+        if (answerText !== "Answer not found in document structure.") {
+          extractedTrivia.push({
+            question: textBlocks[i].innerHTML,
+            answer: answerText
+          });
+        }
+      }
+    }
+    setTriviaCards(extractedTrivia);
+
+  }, [wordHtml]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -163,6 +253,51 @@ const CourseDetail: React.FC = () => {
       .finally(() => setAssignmentLoading(false));
   }, [activeModuleIndex, course, user, effectiveRole]);
 
+  // --- Mammoth Parsing Effect ---
+  // We need to define currentModule safely here for the effect
+  const currentModuleForEffect = course?.modules[activeModuleIndex];
+  // Detect if content is ALREADY html (extracted) or a URL
+  const isHtmlContent = currentModuleForEffect?.type === 'word' && currentModuleForEffect.content && !currentModuleForEffect.content.trim().startsWith('http');
+
+  useEffect(() => {
+    if (!currentModuleForEffect || currentModuleForEffect.type !== 'word' || isHtmlContent) {
+      if (isHtmlContent) setWordHtml(currentModuleForEffect.content);
+      return;
+    }
+
+    const docUrl = currentModuleForEffect.content;
+    const fetchAndParse = async () => {
+      try {
+        // Dynamic import to avoid SSR issues if any
+        const mammoth = await import('mammoth');
+        const response = await fetch(docUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        setWordHtml(result.value);
+      } catch (err) {
+        console.error("Failed to parse Word doc", err);
+      }
+    };
+    fetchAndParse();
+  }, [currentModuleForEffect, isHtmlContent]);
+
+  const handleSaveWordContent = async () => {
+    if (!course || !currentModuleForEffect) return;
+    setIsSavingWord(true);
+    try {
+      await api.patch(`/courses/${course.id}/modules/${currentModuleForEffect.id}`, {
+        content: editorContent
+      });
+      setWordHtml(editorContent);
+      setIsEditingWord(false);
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to save content", err);
+    } finally {
+      setIsSavingWord(false);
+    }
+  };
+
   if (!course) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -189,7 +324,7 @@ const CourseDetail: React.FC = () => {
 
   const handleEnroll = () => {
     if (!user) {
-      navigate('/login');
+      openLoginModal();
       return;
     }
     if (effectiveRole !== 'learner' || isInstructor) {
@@ -370,53 +505,256 @@ const CourseDetail: React.FC = () => {
       case 'ppt':
       case 'word':
         const pptMeta = currentModule.type === "ppt" ? parsePptModuleContent(currentModule.content) : null;
-        const docUrl = currentModule.type === "ppt" ? pptMeta?.fileUrl || "" : currentModule.content;
+        let docUrl = currentModule.type === "ppt" ? pptMeta?.fileUrl || "" : currentModule.content;
+
+        // Determine viewer URL
+        const isPdf = currentModule.type === 'pdf' || docUrl.toLowerCase().endsWith('.pdf');
+        const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(docUrl)}&embedded=true`;
+        const viewerUrl = isPdf ? docUrl : googleViewerUrl;
+
+        // Render Word Content (Extracted)
+        if (currentModule.type === 'word') {
+          return (
+            <div className="space-y-4">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between bg-muted p-4 rounded-t-xl border border-border border-b-0">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <span className="font-medium text-foreground">{currentModule.title}</span>
+                </div>
+                <div className="flex gap-2">
+                  {!isHtmlContent && (
+                    <a
+                      href={docUrl}
+                      download
+                      className="btn-secondary btn-sm inline-flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Original
+                    </a>
+                  )}
+                  {effectiveRole === 'admin' && (
+                    <button
+                      onClick={() => {
+                        setEditorContent(wordHtml || '');
+                        setIsEditingWord(!isEditingWord);
+                      }}
+                      className="btn-secondary btn-sm inline-flex items-center gap-2"
+                    >
+                      {isEditingWord ? 'Cancel Edit' : 'Edit Content'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Content Area */}
+              <div className="bg-background border border-border rounded-b-xl p-8 min-h-[400px]">
+                {isEditingWord ? (
+                  <div className="space-y-4">
+                    <RichTextEditor
+                      value={editorContent}
+                      onChange={setEditorContent}
+                      placeholder="Edit document content..."
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="btn-primary"
+                        onClick={handleSaveWordContent}
+                        disabled={isSavingWord}
+                      >
+                        {isSavingWord ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* View Mode Toggle */}
+                    <div className="flex justify-center mb-6">
+                      <div className="bg-muted p-1 rounded-lg inline-flex">
+                        <button
+                          onClick={() => setViewMode('reader')}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'reader'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                          Read Mode
+                        </button>
+                        <button
+                          onClick={() => setViewMode('trivia')}
+                          disabled={triviaCards.length === 0}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'trivia'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground disabled:opacity-50'
+                            }`}
+                        >
+                          <HelpCircle className="w-4 h-4" />
+                          Trivia Mode
+                          {triviaCards.length > 0 && <span className="badge badge-accent ml-1">{triviaCards.length}</span>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content Display */}
+                    {viewMode === 'trivia' && triviaCards.length > 0 ? (
+                      <div className="max-w-2xl mx-auto">
+                        <div className="card-elevated p-8 min-h-[300px] flex flex-col items-center justify-center text-center relative overflow-hidden">
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent"></div>
+
+                          <h3 className="text-muted-foreground uppercase text-xs font-bold tracking-wider mb-4">
+                            Question {currentTriviaIndex + 1} of {triviaCards.length}
+                          </h3>
+
+                          <div
+                            className="text-xl md:text-2xl font-semibold text-foreground mb-8 text-balance"
+                            dangerouslySetInnerHTML={{ __html: triviaCards[currentTriviaIndex].question }}
+                          />
+
+                          {showTriviaAnswer ? (
+                            <div className="animate-fade-in w-full bg-success/10 p-6 rounded-xl border border-success/20 mb-8">
+                              <p className="text-sm text-success font-bold uppercase mb-2">Answer</p>
+                              <div
+                                className="text-lg text-foreground/90 text-left"
+                                dangerouslySetInnerHTML={{ __html: triviaCards[currentTriviaIndex].answer }}
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setShowTriviaAnswer(true)}
+                              className="btn-secondary mb-8"
+                            >
+                              Reveal Answer
+                            </button>
+                          )}
+
+                          <div className="flex items-center gap-4 w-full justify-between mt-auto pt-6 border-t border-border/50">
+                            <button
+                              onClick={() => {
+                                setCurrentTriviaIndex(prev => Math.max(0, prev - 1));
+                                setShowTriviaAnswer(false);
+                              }}
+                              disabled={currentTriviaIndex === 0}
+                              className="text-muted-foreground hover:text-primary disabled:opacity-50"
+                            >
+                              Previous
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (currentTriviaIndex < triviaCards.length - 1) {
+                                  setCurrentTriviaIndex(prev => prev + 1);
+                                  setShowTriviaAnswer(false);
+                                } else {
+                                  setViewMode('reader'); // Go back to reading
+                                }
+                              }}
+                              className="btn-primary"
+                            >
+                              {currentTriviaIndex < triviaCards.length - 1 ? 'Next Question' : 'Finish Trivia'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Reader Mode (Paginated)
+                      <div className="bg-sheet rounded-xl">
+                        <div
+                          className="prose prose-sm max-w-none dark:prose-invert word-reader min-h-[500px]"
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(pages[pageIndex] || '<p>Loading content...</p>') }}
+                        />
+
+                        {/* Pagination Controls */}
+                        {pages.length > 1 && (
+                          <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+                            <button
+                              onClick={() => {
+                                setPageIndex(prev => Math.max(0, prev - 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              disabled={pageIndex === 0}
+                              className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                              Previous Page
+                            </button>
+
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Page {pageIndex + 1} of {pages.length}
+                            </span>
+
+                            <button
+                              onClick={() => {
+                                setPageIndex(prev => Math.min(pages.length - 1, prev + 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              disabled={pageIndex === pages.length - 1}
+                              className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                            >
+                              Next Page
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleModuleComplete}
+                className="btn-primary flex items-center gap-2"
+              >
+                Mark as Complete & Continue
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        }
+
+        // Render PDF / PPT (Iframe Viewer)
         return (
           <div className="space-y-4">
-            <div className="bg-muted rounded-xl p-8 text-center">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-primary" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {currentModule.title}
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Review this document to continue with the course.
-              </p>
-              {currentModule.type === "ppt" && pptMeta?.slideRange && (
-                <p className="text-sm text-muted-foreground mb-4">
-                  This module covers slides: <span className="font-medium text-foreground">{pptMeta.slideRange}</span>
-                </p>
-              )}
-              <div className="flex justify-center gap-4">
-                <a
-                  href={docUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary inline-flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  View Document
-                </a>
+            <div className="flex items-center justify-between bg-muted p-4 rounded-t-xl border border-border border-b-0">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <span className="font-medium text-foreground">{currentModule.title}</span>
+              </div>
+              <div className="flex gap-2">
                 <a
                   href={docUrl}
                   download
-                  className="btn-secondary inline-flex items-center gap-2"
+                  className="btn-secondary btn-sm inline-flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                   Download
                 </a>
-                {currentModule.type === 'word' && currentModule.slidesUrl && (
-                  <a
-                    href={currentModule.slidesUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-secondary inline-flex items-center gap-2"
-                  >
-                    <Play className="w-4 h-4" />
-                    View Slides
-                  </a>
+                {currentModule.type === 'ppt' && pptMeta?.slideRange && (
+                  <span className="text-xs text-muted-foreground self-center mr-2">
+                    Slides: {pptMeta.slideRange}
+                  </span>
                 )}
               </div>
             </div>
+
+            <div className="bg-background border border-border rounded-b-xl overflow-hidden h-[800px] relative">
+              {currentModule.type !== 'pdf' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/20 -z-10">
+                  <p className="text-muted-foreground">Loading document viewer...</p>
+                </div>
+              )}
+              <iframe
+                src={viewerUrl}
+                className="w-full h-full border-none"
+                title={currentModule.title}
+              />
+              {/* Fallback/Warning for localhost/Office files */}
+              {!isPdf && (
+                <div className="p-2 text-xs text-center text-muted-foreground bg-muted border-t border-border">
+                  Note: Document preview requires a public URL. If you are on localhost or the preview fails, please use the Download button.
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleModuleComplete}
               className="btn-primary flex items-center gap-2"

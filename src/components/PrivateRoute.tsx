@@ -23,14 +23,14 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, allowedRoles }) =
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location, openLogin: true }} replace />;
   }
 
   if (allowedRoles && effectiveRole && !allowedRoles.includes(effectiveRole)) {
     // Redirect to role-appropriate dashboard with 403-like behavior
-    const redirectPath = effectiveRole === 'admin' ? '/admin-dashboard' 
-      : effectiveRole === 'manager' ? '/manager-dashboard' 
-      : '/learner-dashboard';
+    const redirectPath = effectiveRole === 'admin' ? '/admin-dashboard'
+      : effectiveRole === 'manager' ? '/manager-dashboard'
+        : '/learner-dashboard';
     return <Navigate to={redirectPath} replace />;
   }
 

@@ -19,14 +19,14 @@ import {
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { user, effectiveRole, isAdminActingAsLearner, isAuthenticated, logout, switchToAdminMode, switchToLearnerMode } = useAuth();
+  const { user, effectiveRole, isAdminActingAsLearner, isAuthenticated, logout, switchToAdminMode, switchToLearnerMode, openLoginModal } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
     setIsOpen(false);
     setIsUserMenuOpen(false);
   };
@@ -106,8 +106,8 @@ const Navbar: React.FC = () => {
                   key={path}
                   to={path}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${isActive(path)
-                      ? 'bg-primary text-primary-foreground shadow-button'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground shadow-button'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -120,8 +120,8 @@ const Navbar: React.FC = () => {
                 <Link
                   to="/"
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${isActive('/')
-                      ? 'bg-primary text-primary-foreground shadow-button'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground shadow-button'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                 >
                   <Home className="w-4 h-4" />
@@ -130,8 +130,8 @@ const Navbar: React.FC = () => {
                 <Link
                   to="/courses"
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${isActive('/courses')
-                      ? 'bg-primary text-primary-foreground shadow-button'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground shadow-button'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                 >
                   <BookOpen className="w-4 h-4" />
@@ -215,18 +215,18 @@ const Navbar: React.FC = () => {
             ) : (
               // Guest Actions
               <div className="hidden md:flex items-center gap-3">
-                <Link
-                  to="/login"
+                <button
+                  onClick={() => openLoginModal()}
                   className="px-4 py-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   Log In
-                </Link>
-                <Link
-                  to="/register"
+                </button>
+                <button
+                  onClick={() => openLoginModal('register')}
                   className="px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors shadow-button"
                 >
                   Register
-                </Link>
+                </button>
               </div>
             )}
 
@@ -253,8 +253,8 @@ const Navbar: React.FC = () => {
                       to={path}
                       onClick={() => setIsOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive(path)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted'
                         }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -267,9 +267,8 @@ const Navbar: React.FC = () => {
                       key={path}
                       to={path}
                       onClick={() => setIsOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                        isActive(path) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
-                      }`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive(path) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                        }`}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="font-medium">{label}</span>
@@ -330,20 +329,24 @@ const Navbar: React.FC = () => {
                   </Link>
                   <hr className="my-2 border-border" />
                   <div className="p-4 grid grid-cols-2 gap-3">
-                    <Link
-                      to="/login"
-                      onClick={() => setIsOpen(false)}
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        openLoginModal();
+                      }}
                       className="flex items-center justify-center px-4 py-2 text-sm font-medium border border-input rounded-lg hover:bg-accent hover:text-accent-foreground"
                     >
                       Log In
-                    </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setIsOpen(false)}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        openLoginModal('register');
+                      }}
                       className="flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
                     >
                       Register
-                    </Link>
+                    </button>
                   </div>
                 </>
               )}

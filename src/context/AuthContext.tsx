@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, UserProgress } from "@/types/lms";
 import { api, tokenStore, tryRestoreSession } from "@/lib/api";
+import LoginModal from "@/components/LoginModal";
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +31,8 @@ interface AuthContextType {
   assignCourseToLearner: (learnerId: string, courseId: string) => void;
   switchToLearnerMode: () => void;
   switchToAdminMode: () => void;
+  openLoginModal: (view?: 'login' | 'register') => void;
+  closeLoginModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -297,6 +300,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem("admin_role_mode", "learner");
   };
 
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [modalView, setModalView] = useState<'login' | 'register'>('login');
+
+  const openLoginModal = (view: 'login' | 'register' = 'login') => {
+    setModalView(view);
+    setIsLoginModalOpen(true);
+  };
+  const closeLoginModal = () => setIsLoginModalOpen(false);
+
   const switchToAdminMode = () => {
     if (user?.role !== "admin") return;
     setAdminRoleMode("admin");
@@ -329,9 +341,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         assignCourseToLearner,
         switchToLearnerMode,
         switchToAdminMode,
+        openLoginModal,
+        closeLoginModal,
       }}
     >
       {children}
+      <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} initialView={modalView} />
     </AuthContext.Provider>
   );
 };

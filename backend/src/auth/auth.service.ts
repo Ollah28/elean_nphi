@@ -241,6 +241,7 @@ export class AuthService {
           avatar: profile.picture,
           passwordHash: null,
           role: Role.learner,
+          isEmailVerified: true,
         },
         include: { progressRecords: true, certificates: true, managedCourses: true, assignedLearners: true },
       });

@@ -295,4 +295,58 @@
       transform: translateY(-10px);
     }
   }
+
+  /* Word Content Styling */
+  .word-reader {
+    @apply space-y-6 text-foreground/90 leading-relaxed;
+  }
+
+  .word-reader h1 {
+    @apply text-3xl font-bold mb-6 pb-4 border-b-2 border-primary/20 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+
+  .word-reader h2 {
+    @apply text-2xl font-semibold mb-4 mt-8 pl-4 border-l-4 border-secondary text-foreground flex items-center bg-secondary/5 py-2 rounded-r-lg;
+  }
+
+  .word-reader h3 {
+    @apply text-xl font-medium mb-3 mt-6 text-primary flex items-center gap-2;
+  }
+
+  .word-reader h3::before {
+    content: '';
+    @apply w-2 h-2 rounded-full bg-accent;
+  }
+
+  /* Highlight Questions (often bolded in docs) */
+  .word-reader strong {
+    @apply text-primary font-bold;
+  }
+
+  /* Style paragraphs that start with "Question:" pattern if possible, 
+     but since we can't do regex in CSS, we treat all paragraphs nicely. */
+  .word-reader p {
+    @apply mb-4 text-base;
+  }
+
+  .word-reader ul {
+    @apply list-none space-y-2 ml-4 mb-4;
+  }
+
+  .word-reader ul li {
+    @apply relative pl-6;
+  }
+
+  .word-reader ul li::before {
+    content: "•";
+    @apply absolute left-0 text-secondary font-bold text-lg;
+  }
+
+  .word-reader ol {
+    @apply list-decimal list-outside ml-6 space-y-2 mb-4 marker:text-primary marker:font-bold;
+  }
+
+  .word-reader blockquote {
+    @apply italic border-l-4 border-muted pl-4 py-2 my-4 bg-muted/20 rounded-r-lg text-muted-foreground;
+  }
 }

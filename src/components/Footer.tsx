@@ -71,9 +71,7 @@ const Footer: React.FC = () => {
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Health eLearning Platform. All rights reserved.
           </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            Made with <Heart className="w-4 h-4 text-destructive" /> for health workers
-          </p>
+
         </div>
       </div>
     </footer>

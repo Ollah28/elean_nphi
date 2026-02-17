@@ -66,8 +66,8 @@ const VerifyEmail: React.FC = () => {
                         <XCircle className="w-16 h-16 text-destructive mb-4" />
                         <h2 className="text-2xl font-bold mb-2">Verification Failed</h2>
                         <p className="text-muted-foreground mb-6">{message}</p>
-                        <Link to="/login" className="btn-primary w-full max-w-xs">
-                            Return to Login
+                        <Link to="/" className="btn-primary w-full max-w-xs">
+                            Return to Home
                         </Link>
                     </div>
                 )}
