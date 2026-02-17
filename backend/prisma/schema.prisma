@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  learner
+  admin
+  manager
+}
+
+enum ModuleType {
+  video
+  pdf
+  ppt
+  word
+  quiz
+  assignment
+}
+
+enum NotificationType {
+  info
+  warning
+  success
+  alert
+}
+
+enum CourseStatus {
+  draft
+  pending_approval
+  published
+  rejected
+  archived
+}
+
+model User {
+  id               String        @id @default(cuid())
+  name             String
+  email            String        @unique
+  passwordHash     String?
+  googleId         String?       @unique
+  role             Role          @default(learner)
+  canSwitchToLearnerView Boolean @default(false)
+  avatar           String?
+  department       String?
+  isEmailVerified  Boolean       @default(false)
+  emailVerificationToken String?
+  joinedAt         DateTime      @default(now())
+  totalCpdPoints   Int           @default(0)
+  assignedManagerId String?
+  assignedManager  User?         @relation("ManagerLearners", fields: [assignedManagerId], references: [id])
+  assignedLearners User[]        @relation("ManagerLearners")
+  managedCourses   Course[]      @relation("ManagerCourses")
+  reviewedCourses  Course[]      @relation("CourseReviewer")
+  progressRecords  Progress[]
+  certificates     Certificate[]
+  assignmentSubmissions AssignmentSubmission[]
+  auditLogs        AuditLog[]    @relation("AuditActor")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([email])
+}
+
+model Course {
+  id                String      @id @default(cuid())
+  title             String
+  description       String
+  thumbnail         String
+  instructor        String
+  category          String
+  duration          String
+  cpdPoints         Int
+  enrolledCount     Int         @default(0)
+  rating            Float       @default(4.5)
+  level             String
+  status            CourseStatus @default(draft)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewNote        String?
+  assignedManagerId String?
+  assignedManager   User?       @relation("ManagerCourses", fields: [assignedManagerId], references: [id])
+  reviewedById      String?
+  reviewedBy        User?       @relation("CourseReviewer", fields: [reviewedById], references: [id])
+  modules           Module[]
+  progressRecords   Progress[]
+  certificates      Certificate[]
+  assignmentSubmissions AssignmentSubmission[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
+model Module {
+  id         String       @id @default(cuid())
+  courseId   String
+  course     Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title      String
+  type       ModuleType
+  content    String
+  slidesUrl  String?
+  duration   Int?
+  position   Int
+  completed  Boolean?     @default(false)
+  questions  QuizQuestion[]
+  submissions AssignmentSubmission[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([courseId, position])
+}
+
+model QuizQuestion {
+  id            String   @id @default(cuid())
+  moduleId      String
+  module        Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  question      String
+  options       String[]
+  correctAnswer Int
+  position      Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Progress {
+  id              String   @id @default(cuid())
+  userId          String
+  courseId        String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress        Int      @default(0)
+  lastModuleIndex Int      @default(0)
+  lastVideoTime   Int?
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  quizScores      Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([userId, courseId])
+}
+
+model Certificate {
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseName  String
+  completedAt DateTime @default(now())
+  cpdPoints   Int
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  type        NotificationType
+  message     String
+  targetRoles Role[]
+  createdAt   DateTime         @default(now())
+  expiresAt   DateTime?
+
+  @@index([expiresAt])
+}
+
+model RefreshSession {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AssignmentSubmission {
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  moduleId    String
+  content     String
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([courseId, moduleId])
+  @@index([userId, submittedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole  Role?
+  action     String
+  entityType String
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+}
