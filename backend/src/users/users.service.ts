@@ -23,21 +23,6 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) { }
 
   async listUsers(query: ListUsersQueryDto, actor: JwtPayload) {
-    const where: Prisma.UserWhereInput = {
-      ...(actor.role === Role.manager
-        ? { role: Role.learner } // Managers only see learners by default? Or let them see all? Let's restrict to learners for now or allow all but limit actions. 
-        // User request: "Manager ... specific, but more restricted, permissions". 
-        // Let's allow Managers to search everyone but filtering actions.
-        // Actually, previous logic restricted Manager to see ONLY Admins. 
-        // Let's remove the restriction for Admin, and maybe restrict Manager.
-        // Safest: Admin sees all. Manager sees all (for collaboration) or just Learners.
-        // Let's go with: Admin sees all. Manager sees Learners.
-        : query.role
-          ? { role: query.role }
-          : {}),
-      ...(query.department ? { department: query.department } : {}),
-    };
-
     // CORRECTION: Let's clean this up.
     // Admin: No extra filter.
     // Manager: No extra filter? 
