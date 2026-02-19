@@ -58,17 +58,4 @@ export class AuthController {
     await this.authService.resetPassword(dto);
   }
 
-  @Get("google")
-  @UseGuards(AuthGuard("google"))
-  async googleAuth() {
-    // Initiates the Google OAuth flow
-  }
-
-  @Get("google/callback")
-  @UseGuards(AuthGuard("google"))
-  async googleAuthRedirect(@Req() req: any, @Res() res: any) {
-    const { accessToken, refreshToken } = await this.authService.validateUserFromGoogle(req.user);
-    // Redirect to frontend with tokens
-    res.redirect(`http://localhost:5173/auth/success?accessToken=${accessToken}&refreshToken=${refreshToken}`);
-  }
 }

@@ -10,10 +10,10 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 'login' }) => {
-    const [view, setView] = useState<'login' | 'register'>(initialView);
+    const [view, setView] = useState<'login' | 'register' | 'forgot-password'>(initialView);
     const [name, setName] = useState('');
     const [username, setUsername] = useState(''); // Used as email for login
-    const [email, setEmail] = useState(''); // Used for register
+    const [email, setEmail] = useState(''); // Used for register/forgot-password
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -76,7 +76,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                 } else {
                     setError('Invalid username or password');
                 }
-            } else {
+            } else if (view === 'register') {
                 if (!validateRegister()) {
                     setIsLoading(false);
                     return;
@@ -84,10 +84,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                 const result = await register(name.trim(), email.trim().toLowerCase(), password);
                 if (result.success) {
                     setSuccessMessage(result.message || 'Registration successful! Please check your email.');
-                    // Don't close immediately, show success message
                 } else {
                     setError(result.error || 'Registration failed');
                 }
+            } else if (view === 'forgot-password') {
+                // Call forgot password API
+                // Since context doesn't have forgotPassword, we'll fetch directly or add to context.
+                // Ideally add to Context, but for speed, let's direct fetch here.
+                // Actually, let's use a simple fetch since context changes are broad.
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+                });
+
+                // Always show success message for security
+                setSuccessMessage('If an account exists with this email, you will receive a password reset link shortly.');
             }
         } catch (err) {
             setError('An error occurred. Please try again.');
@@ -109,7 +121,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Mail className="w-8 h-8 text-green-600" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-4">Check Your Email</h2>
+                    <h2 className="text-2xl font-bold mb-4">
+                        {view === 'forgot-password' ? 'Reset Email Sent' : 'Check Your Email'}
+                    </h2>
                     <p className="text-muted-foreground mb-8">{successMessage}</p>
                     <button
                         onClick={() => {
@@ -118,11 +132,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                         }}
                         className="btn-primary w-full py-3 block"
                     >
-                        Proceed to Login
+                        Back to Login
                     </button>
                 </div>
             </div>
         );
+    }
+
+    // Determine title text
+    let title = 'Welcome Back';
+    let subtitle = 'Sign in to your account';
+    if (view === 'register') {
+        title = 'Create Account';
+        subtitle = 'Join as a learner today';
+    } else if (view === 'forgot-password') {
+        title = 'Reset Password';
+        subtitle = 'Enter your email to receive a reset link';
     }
 
     return (
@@ -136,14 +161,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
 
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                        {view === 'login' ? <UserIcon className="w-6 h-6" /> : <UserIcon className="w-6 h-6" />}
+                        <UserIcon className="w-6 h-6" />
                     </div>
-                    <h2 className="text-2xl font-bold text-foreground">
-                        {view === 'login' ? 'Welcome Back' : 'Create Account'}
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {view === 'login' ? 'Sign in to your account' : 'Join as a learner today'}
-                    </p>
+                    <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -171,58 +192,87 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                         </div>
                     )}
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
-                            {view === 'login' ? 'Username or Email' : 'Email Address'}
-                        </label>
-                        <div className="relative">
-                            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            {view === 'login' ? (
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="input-field pl-10"
-                                    placeholder="Enter username"
-                                    required
-                                />
-                            ) : (
+                    {view !== 'forgot-password' && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                {view === 'login' ? 'Username or Email' : 'Email Address'}
+                            </label>
+                            <div className="relative">
+                                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                {view === 'login' ? (
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="input-field pl-10"
+                                        placeholder="Enter username"
+                                        required
+                                    />
+                                ) : (
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="input-field pl-10"
+                                        placeholder="Enter email"
+                                        required
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'forgot-password' && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Email Address</label>
+                            <div className="relative">
+                                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="input-field pl-10"
-                                    placeholder="Enter email"
+                                    placeholder="Enter your registered email"
                                     required
                                 />
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <label className="text-sm font-medium text-foreground">Password</label>
-                            {view === 'login' && <a href="#" className="text-xs text-primary hover:underline">Forgot password?</a>}
+                    {view !== 'forgot-password' && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-medium text-foreground">Password</label>
+                                {view === 'login' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setView('forgot-password')}
+                                        className="text-xs text-primary hover:underline focus:outline-none"
+                                    >
+                                        Forgot password?
+                                    </button>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="input-field pl-10 pr-10"
+                                    placeholder="Enter password"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
                         </div>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="input-field pl-10 pr-10"
-                                placeholder="Enter password"
-                                required
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
+                    )}
 
                     {view === 'register' && (
                         <div className="space-y-2">
@@ -249,55 +299,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                         {isLoading ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>{view === 'login' ? 'Signing in...' : 'Creating Account...'}</span>
+                                <span>Processing...</span>
                             </>
                         ) : (
-                            view === 'login' ? 'Sign In' : 'Create Account'
+                            view === 'login' ? 'Sign In' : (view === 'register' ? 'Create Account' : 'Send Reset Link')
                         )}
                     </button>
                 </form>
 
-                <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                    </div>
-                </div>
 
-                <button
-                    type="button"
-                    onClick={() => window.location.href = "http://localhost:3001/auth/google"}
-                    className="w-full py-2.5 flex items-center justify-center gap-2 border border-input rounded-lg hover:bg-muted/50 transition-colors text-sm font-medium"
-                >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            fill="#4285F4"
-                        />
-                        <path
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            fill="#34A853"
-                        />
-                        <path
-                            d="M5.84 14.12c-.22-.66-.35-1.36-.35-2.12s.13-1.46.35-2.12V7.04H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.96l2.66-2.84z"
-                            fill="#FBBC05"
-                        />
-                        <path
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.04l3.66 2.84c.87-2.6 3.3-4.5 6.16-4.5z"
-                            fill="#EA4335"
-                        />
-                    </svg>
-                    {view === 'login' ? 'Sign in with Google' : 'Sign up with Google'}
-                </button>
 
                 <p className="mt-6 text-center text-sm text-muted-foreground">
-                    {view === 'login' ? "Don't have an account? " : "Already have an account? "}
+                    {view === 'login' ? "Don't have an account? " : (view === 'register' ? "Already have an account? " : "Remember your password? ")}
                     <button
                         onClick={() => {
                             setError('');
-                            setView(view === 'login' ? 'register' : 'login');
+                            if (view === 'forgot-password') setView('login');
+                            else setView(view === 'login' ? 'register' : 'login');
                         }}
                         className="text-primary font-medium hover:underline"
                     >
@@ -305,7 +323,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, initialView = 
                     </button>
                 </p>
             </div>
-        </div>
+        </div >
     );
 };
 

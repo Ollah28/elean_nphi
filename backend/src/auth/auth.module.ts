@@ -6,7 +6,6 @@ import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./jwt.strategy";
 import { RolesGuard } from "./roles.guard";
 
-import { GoogleStrategy } from "./google.strategy";
 import { EmailModule } from "../email/email.module";
 
 @Module({
@@ -15,7 +14,7 @@ import { EmailModule } from "../email/email.module";
     JwtModule.register({}),
     EmailModule,
   ],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, RolesGuard],
+  providers: [AuthService, JwtStrategy, RolesGuard],
   controllers: [AuthController],
   exports: [JwtStrategy, RolesGuard],
 })

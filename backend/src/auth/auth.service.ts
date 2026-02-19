@@ -188,9 +188,17 @@ export class AuthService {
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
-    if (!user) return;
+    if (!user) return; // Silent fail for security
+
+    // Check if user is google auth only
+    if (!user.passwordHash && user.googleId) {
+      // Optional: Send email saying "You use Google login", but for now just silent return or ignore.
+      return;
+    }
+
     const token = randomUUID();
     await this.redis.setex(`reset:${token}`, 60 * 30, user.id);
+    await this.emailService.sendPasswordResetEmail(user.email, token);
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -221,40 +229,4 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async validateUserFromGoogle(profile: any) {
-    let user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { googleId: profile.googleId },
-          { email: profile.email.toLowerCase() }
-        ]
-      },
-      include: { progressRecords: true, certificates: true, managedCourses: true, assignedLearners: true },
-    });
-
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email: profile.email.toLowerCase(),
-          name: `${profile.firstName} ${profile.lastName}`.trim(),
-          googleId: profile.googleId,
-          avatar: profile.picture,
-          passwordHash: null,
-          role: Role.learner,
-          isEmailVerified: true,
-        },
-        include: { progressRecords: true, certificates: true, managedCourses: true, assignedLearners: true },
-      });
-    } else if (!user.googleId) {
-      // Link Google account to existing email user
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { googleId: profile.googleId, avatar: user.avatar || profile.picture },
-        include: { progressRecords: true, certificates: true, managedCourses: true, assignedLearners: true },
-      });
-    }
-
-    const tokens = await this.issueTokens(user.id, user.email, user.role);
-    return { user: toFrontendUser(user), ...tokens };
-  }
 }

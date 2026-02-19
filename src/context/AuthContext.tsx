@@ -158,13 +158,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     name: string,
     email: string,
     password: string,
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; message?: string; error?: string }> => {
     try {
       const { data } = await api.post("/auth/register", { name, email, password });
-      tokenStore.set(data.accessToken, data.refreshToken);
-      setUser(data.user);
-      setUsers([data.user]);
-      return { success: true };
+      return { success: true, message: data.message };
     } catch (error: any) {
       return {
         success: false,
