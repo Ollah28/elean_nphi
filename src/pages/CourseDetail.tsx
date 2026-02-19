@@ -139,7 +139,7 @@ const CourseDetail: React.FC = () => {
   const { getCourseById, deleteCourse, updateCourse } = useCourses();
   const contentTopRef = useRef<HTMLDivElement>(null); // Ref for scrolling to content top
 
-  const [activeModuleIndex, setActiveModuleIndex] = useState(0);
+  const [activeModuleIndex, setActiveModuleIndex] = useState(-1); // -1 = course overview
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, any>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -1296,35 +1296,59 @@ const CourseDetail: React.FC = () => {
           {/* Main Content Area (Left) */}
           <div className="space-y-6 min-w-0">
             <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden" ref={contentTopRef}>
-              {/* Course Description — before module content */}
-              {course.description && (
-                <div className="px-6 pt-5 pb-4 border-b border-border">
-                  <h3 className="text-sm font-semibold text-foreground mb-2">About this Course</h3>
-                  <div
-                    className="text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(decodeHtmlEntities(course.description), { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'span', 'ul', 'li', 'ol', 'a'], ALLOWED_ATTR: ['href'] }) }}
-                  />
+              {activeModuleIndex === -1 ? (
+                /* Course Overview / About Page */
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <BookOpen className="w-4 h-4 text-primary" />
+                    </div>
+                    <h2 className="text-lg font-bold text-foreground">About this Course</h2>
+                  </div>
+                  {course.description ? (
+                    <div
+                      className="text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(decodeHtmlEntities(course.description), { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'span', 'ul', 'li', 'ol', 'a', 'h1', 'h2', 'h3', 'h4'], ALLOWED_ATTR: ['href'] }) }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No description available for this course.</p>
+                  )}
+                  <div className="mt-6 pt-4 border-t border-border flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-primary" />
+                      <span>{totalModules} Modules</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span>{getDurationHours(course.duration)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-accent" />
+                      <span>{course.cpdPoints} CPD Points</span>
+                    </div>
+                  </div>
                 </div>
+              ) : (
+                renderModuleContent()
               )}
-              {renderModuleContent()}
             </div>
 
             {/* Module Navigation */}
             <div className="flex items-center justify-between">
               <button
                 onClick={() => {
-                  if (activeModuleIndex > 0) {
+                  if (activeModuleIndex > -1) {
                     setActiveModuleIndex(activeModuleIndex - 1);
                     setQuizAnswers({});
                     setQuizSubmitted(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }
                 }}
-                disabled={activeModuleIndex === 0}
+                disabled={activeModuleIndex === -1}
                 className="btn-secondary flex items-center gap-2 disabled:opacity-50"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Previous Module</span>
+                <span>{activeModuleIndex === 0 ? 'Course Overview' : 'Previous Module'}</span>
               </button>
               <button
                 onClick={() => {
@@ -1334,13 +1358,13 @@ const CourseDetail: React.FC = () => {
                     setQuizAnswers({});
                     setQuizSubmitted(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                  } else {
+                  } else if (activeModuleIndex === totalModules - 1) {
                     handleCompleteCourse();
                   }
                 }}
                 className="btn-primary flex items-center gap-2"
               >
-                {activeModuleIndex < totalModules - 1 ? 'Next Module' : 'Complete Course'}
+                {activeModuleIndex === -1 ? 'Start Module 1' : activeModuleIndex < totalModules - 1 ? 'Next Module' : 'Complete Course'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1371,6 +1395,24 @@ const CourseDetail: React.FC = () => {
                 <div className="bg-card rounded-xl border border-border p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
                   <h3 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wider">Modules</h3>
                   <div className="space-y-1">
+                    {/* Overview item */}
+                    <button
+                      onClick={() => {
+                        setActiveModuleIndex(-1);
+                        contentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className={`w-full text-left p-2.5 rounded-lg flex items-center gap-2.5 transition-all text-sm ${activeModuleIndex === -1
+                        ? 'bg-primary/10 text-primary ring-1 ring-primary/20'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                        }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${activeModuleIndex === -1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        <BookOpen className="w-3 h-3" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium leading-tight truncate">Course Overview</p>
+                      </div>
+                    </button>
                     {course.modules.map((module, index) => {
                       const isActive = index === activeModuleIndex;
                       const isCompleted = completedModules.includes(module.id);
