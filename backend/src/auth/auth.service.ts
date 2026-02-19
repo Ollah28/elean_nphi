@@ -1,9 +1,11 @@
 import {
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma, Role } from "@prisma/client";
@@ -64,8 +66,10 @@ export class AuthService {
       await this.emailService.sendVerificationEmail(created.email, token);
     } catch (e) {
       console.error("Failed to send verification email", e);
-      // Optional: rollback user creation or just log it. 
-      // For now, let's keep the user but they will need to request resend.
+      if (this.config.get('NODE_ENV') === 'production') {
+        // In production, let the user know email failed so they can report it
+        throw new InternalServerErrorException(`Registration successful/created, but failed to send email: ${(e as any).message}`);
+      }
     }
 
     return { message: "Registration successful. Please check your email to verify your account." };

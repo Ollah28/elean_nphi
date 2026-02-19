@@ -62,8 +62,11 @@ export class EmailService {
             console.log(`Verification email sent to ${email}. MessageId: ${info.messageId}`);
             return info;
         } catch (error) {
-            console.error('Failed to send email via SMTP (Check console for link above):', error);
-            // Don't throw error so user can still copy link from console if SMTP fails
+            console.error('Failed to send email via SMTP:', error);
+            if (this.config.get('NODE_ENV') === 'production') {
+                throw error;
+            }
+            // Don't throw error in dev so user can still copy link from console
             return { id: 'mock-id' };
         }
     }
@@ -100,8 +103,11 @@ export class EmailService {
         `,
             });
             console.log(`Password reset email sent to ${email}`);
-        } catch (e) {
-            console.error("Failed to send password reset email (Check console for link above)", e);
+        } catch (error) {
+            console.error("Failed to send password reset email:", error);
+            if (this.config.get('NODE_ENV') === 'production') {
+                throw error;
+            }
         }
     }
 }
