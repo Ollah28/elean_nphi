@@ -399,6 +399,38 @@ const CourseDetail: React.FC = () => {
     }
   };
 
+  // Auth gate: block unauthenticated users
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center bg-card rounded-2xl p-8 md:p-12 shadow-lg border border-border max-w-md w-full">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Login Required</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              You need to be logged in to view course content. Please log in or create an account to continue.
+            </p>
+            <button
+              onClick={() => openLoginModal()}
+              className="btn-primary w-full py-2.5 shadow-lg shadow-primary/20"
+            >
+              Log In to Continue
+            </button>
+            <Link to="/courses" className="block mt-4 text-sm text-muted-foreground hover:text-primary transition-colors">
+              ← Browse Courses
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!course) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
