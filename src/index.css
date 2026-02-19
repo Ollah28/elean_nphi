@@ -162,20 +162,16 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg 
-           transition-all duration-200 hover:opacity-90 active:scale-[0.98];
+    @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg transition-all duration-200 hover:opacity-90 active:scale-[0.98];
     box-shadow: var(--shadow-button);
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground font-medium px-6 py-3 rounded-lg
-           border border-border transition-all duration-200 hover:bg-secondary/80;
+    @apply bg-secondary text-secondary-foreground font-medium px-6 py-3 rounded-lg border border-border transition-all duration-200 hover:bg-secondary/80;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-lg border border-input bg-background
-           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
-           transition-all duration-200 placeholder:text-muted-foreground;
+    @apply w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200 placeholder:text-muted-foreground;
   }
 
   .progress-bar {
@@ -251,6 +247,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -261,6 +258,7 @@
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -272,6 +270,7 @@
       opacity: 0;
       transform: translateX(20px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -279,74 +278,177 @@
   }
 
   @keyframes pulseSoft {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.7;
     }
   }
 
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-10px);
     }
   }
 
-  /* Word Content Styling */
+  /* ===== Word Content Styling ===== */
   .word-reader {
-    @apply space-y-6 text-foreground/90 leading-relaxed;
+    @apply text-foreground/90 leading-relaxed;
+    font-size: 1rem;
+    line-height: 1.8;
   }
 
+  /* Remove empty paragraphs mammoth generates */
+  .word-reader p:empty,
+  .word-reader span:empty {
+    display: none;
+  }
+
+  /* --- Headings --- */
   .word-reader h1 {
-    @apply text-3xl font-bold mb-6 pb-4 border-b-2 border-primary/20 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+    @apply text-2xl md:text-3xl font-bold mb-5 pb-3 border-b-2 border-primary/20 text-primary mt-6;
+  }
+
+  .word-reader h1:first-child {
+    @apply mt-0;
   }
 
   .word-reader h2 {
-    @apply text-2xl font-semibold mb-4 mt-8 pl-4 border-l-4 border-secondary text-foreground flex items-center bg-secondary/5 py-2 rounded-r-lg;
+    @apply text-xl md:text-2xl font-semibold mb-4 mt-8 pl-4 border-l-4 border-secondary text-foreground bg-secondary/5 py-2 rounded-r-lg;
   }
 
   .word-reader h3 {
-    @apply text-xl font-medium mb-3 mt-6 text-primary flex items-center gap-2;
+    @apply text-lg md:text-xl font-semibold mb-3 mt-6 text-primary/90;
   }
 
-  .word-reader h3::before {
-    content: '';
-    @apply w-2 h-2 rounded-full bg-accent;
+  .word-reader h4,
+  .word-reader h5,
+  .word-reader h6 {
+    @apply text-base md:text-lg font-semibold mb-2 mt-5 text-foreground/80;
   }
 
-  /* Highlight Questions (often bolded in docs) */
-  .word-reader strong {
-    @apply text-primary font-bold;
+  /* --- Bold / Strong --- */
+  .word-reader strong,
+  .word-reader b {
+    @apply text-foreground font-bold;
   }
 
-  /* Style paragraphs that start with "Question:" pattern if possible, 
-     but since we can't do regex in CSS, we treat all paragraphs nicely. */
+  /* --- Paragraphs --- */
   .word-reader p {
-    @apply mb-4 text-base;
+    @apply mb-3 text-base leading-relaxed;
   }
 
+  .word-reader p+p {
+    @apply mt-0;
+  }
+
+  /* --- Unordered Lists --- */
   .word-reader ul {
-    @apply list-none space-y-2 ml-4 mb-4;
+    @apply list-none space-y-1.5 ml-2 mb-4 pl-4 border-l-2 border-muted;
   }
 
   .word-reader ul li {
-    @apply relative pl-6;
+    @apply relative pl-5 text-base leading-relaxed;
   }
 
   .word-reader ul li::before {
     content: "•";
-    @apply absolute left-0 text-secondary font-bold text-lg;
+    @apply absolute left-0 text-secondary font-bold text-lg leading-none;
+    top: 0.35em;
   }
 
+  /* Nested lists */
+  .word-reader ul ul {
+    @apply mt-1.5 mb-1 border-l-2 border-primary/10;
+  }
+
+  .word-reader ul ul li::before {
+    content: "◦";
+    @apply text-primary/60;
+  }
+
+  .word-reader ul ul ul li::before {
+    content: "▪";
+    @apply text-muted-foreground text-sm;
+  }
+
+  /* --- Ordered Lists --- */
   .word-reader ol {
-    @apply list-decimal list-outside ml-6 space-y-2 mb-4 marker:text-primary marker:font-bold;
+    @apply list-decimal list-outside ml-6 space-y-1.5 mb-4;
   }
 
+  .word-reader ol li {
+    @apply text-base leading-relaxed pl-2;
+  }
+
+  .word-reader ol li::marker {
+    @apply text-primary font-bold;
+  }
+
+  /* --- Blockquotes --- */
   .word-reader blockquote {
-    @apply italic border-l-4 border-muted pl-4 py-2 my-4 bg-muted/20 rounded-r-lg text-muted-foreground;
+    @apply border-l-4 border-primary/30 pl-5 py-3 my-5 bg-primary/5 rounded-r-lg text-foreground/80 italic;
+  }
+
+  /* --- Tables --- */
+  .word-reader table {
+    @apply w-full border-collapse my-6 rounded-lg overflow-hidden text-sm;
+    border: 1px solid hsl(var(--border));
+  }
+
+  .word-reader thead {
+    background: hsl(var(--primary) / 0.08);
+  }
+
+  .word-reader th {
+    @apply text-left text-xs font-bold uppercase tracking-wider px-4 py-3 text-primary border-b-2;
+    border-color: hsl(var(--primary) / 0.2);
+  }
+
+  .word-reader td {
+    @apply px-4 py-3 text-foreground/80 border-b;
+    border-color: hsl(var(--border));
+  }
+
+  .word-reader tbody tr:nth-child(even) {
+    background: hsl(var(--muted) / 0.3);
+  }
+
+  .word-reader tbody tr:hover {
+    background: hsl(var(--primary) / 0.04);
+  }
+
+  /* --- Images --- */
+  .word-reader img {
+    @apply max-w-full h-auto rounded-lg my-4 shadow-sm border border-border;
+  }
+
+  /* --- Links --- */
+  .word-reader a {
+    @apply text-primary underline underline-offset-2 decoration-primary/40 hover:decoration-primary transition-colors;
+  }
+
+  /* --- Horizontal Rules --- */
+  .word-reader hr {
+    @apply my-8 border-t-2 border-border;
+  }
+
+  /* --- Code (rare in Word but possible) --- */
+  .word-reader code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-primary;
+  }
+
+  .word-reader pre {
+    @apply bg-muted p-4 rounded-lg overflow-x-auto my-4 text-sm;
   }
 }

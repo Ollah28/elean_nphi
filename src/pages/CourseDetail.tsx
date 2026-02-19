@@ -187,11 +187,19 @@ const CourseDetail: React.FC = () => {
     // 1. Pagination Logic
     const parser = new DOMParser();
     const doc = parser.parseFromString(wordHtml, 'text/html');
+
+    // Clean up empty nodes that mammoth generates
+    doc.body.querySelectorAll('p, span').forEach((el) => {
+      if (!el.textContent?.trim() && !el.querySelector('img, table, iframe')) {
+        el.remove();
+      }
+    });
+
     const nodes = Array.from(doc.body.childNodes);
     const newPages: string[] = [];
     let currentPageContent: Node[] = [];
     let currentLength = 0;
-    const MAX_PAGE_LENGTH = 1500; // split roughly every 1500 characters
+    const MAX_PAGE_LENGTH = 3500; // larger pages for more complete content
 
     nodes.forEach((node) => {
       const isHeader = node.nodeName.match(/^H[1-6]$/);
