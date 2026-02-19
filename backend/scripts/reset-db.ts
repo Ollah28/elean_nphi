@@ -44,6 +44,33 @@ async function main() {
     } catch (e) {
         console.error('Error creating admin:', e);
     }
+
+    console.log('🎓 Creating Default Learner Account...');
+
+    // Learner Details
+    const learnerEmail = 'learner@demo.com';
+    const learnerPassword = 'Learner123';
+
+    const hashedLearnerPassword = await bcrypt.hash(learnerPassword, 10);
+
+    try {
+        await prisma.user.create({
+            data: {
+                name: 'Demo Learner',
+                email: learnerEmail,
+                passwordHash: hashedLearnerPassword,
+                role: Role.learner,
+                department: 'General',
+                isEmailVerified: true,
+                emailVerificationToken: null,
+            },
+        });
+        console.log('✅ Learner account created successfully!');
+        console.log(`📧 Email: ${learnerEmail}`);
+        console.log(`🔑 Password: ${learnerPassword}`);
+    } catch (e) {
+        console.error('Error creating learner:', e);
+    }
 }
 
 main()
