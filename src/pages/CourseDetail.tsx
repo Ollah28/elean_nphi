@@ -1292,6 +1292,17 @@ const CourseDetail: React.FC = () => {
           </div>
         )}
 
+        {/* Course Description */}
+        {!isFocusMode && course.description && (
+          <div className="bg-card rounded-xl p-5 shadow-sm border border-border mb-6">
+            <h3 className="text-sm font-semibold text-foreground mb-2">About this Course</h3>
+            <div
+              className="text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(decodeHtmlEntities(course.description), { ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'span', 'ul', 'li', 'ol', 'a'], ALLOWED_ATTR: ['href'] }) }}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
           {/* Main Content Area (Left) */}
           <div className="space-y-6 min-w-0">
