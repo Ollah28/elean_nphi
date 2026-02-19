@@ -66,12 +66,11 @@ export class AuthService {
       await this.emailService.sendVerificationEmail(created.email, token);
     } catch (e) {
       console.error("Failed to send verification email", e);
-      if (this.config.get('NODE_ENV') === 'production') {
-        const appUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
-        const verificationLink = `${appUrl}/verify-email?token=${token}`;
-        // In production, let the user know email failed so they can report it
-        throw new InternalServerErrorException(`Registration successful/created, but failed to send email. MANUAL VERIFICATION LINK: ${verificationLink} . Error details: ${(e as any).message}`);
-      }
+      console.error("Failed to send verification email", e);
+      // Always provide the manual link if email fails, for both Dev and Prod debugging
+      const appUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
+      const verificationLink = `${appUrl}/verify-email?token=${token}`;
+      throw new InternalServerErrorException(`Registration successful/created, but failed to send email. MANUAL VERIFICATION LINK: ${verificationLink} . Error details: ${(e as any).message}`);
     }
 
     return { message: "Registration successful. Please check your email to verify your account." };

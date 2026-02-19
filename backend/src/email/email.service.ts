@@ -8,14 +8,16 @@ export class EmailService {
 
     constructor(private config: ConfigService) {
         // Initialize Nodemailer with Gmail SMTP settings
-        const smtpHost = this.config.get<string>('SMTP_HOST');
+        const smtpHost = this.config.get<string>('SMTP_HOST') || 'smtp.gmail.com'; // Default to gmail if missing
         const smtpPort = this.config.get<number>('SMTP_PORT', 587); // Default to 587
         const smtpUser = this.config.get<string>('SMTP_USER');
         const smtpPass = this.config.get<string>('SMTP_PASS');
 
-        if (!smtpUser || !smtpPass || smtpUser === 'YOUR_GMAIL_ADDRESS') {
-            console.warn('⚠️  SMTP_USER or SMTP_PASS is missing/default in .env. Emails will NOT send.');
-            console.warn('   Please update .env with your Gmail Address and App Password.');
+        console.log(`📧 Email Service Initialized with Host: ${smtpHost}:${smtpPort}`);
+        console.log(`📧 User: ${smtpUser ? '***' : 'MISSING'}`);
+
+        if (!smtpUser || !smtpPass) {
+            console.warn('⚠️  SMTP_USER or SMTP_PASS is missing in .env. Emails will NOT send.');
         }
 
         this.transporter = nodemailer.createTransport({
