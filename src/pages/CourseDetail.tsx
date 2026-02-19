@@ -25,7 +25,10 @@ import {
   ArrowRight,
   ChevronRight,
   BookOpen,
-  Pencil
+  Pencil,
+  Trash2,
+  Save,
+  X
 } from 'lucide-react';
 import { Module, QuizQuestion } from '@/types/lms';
 import CompletionModal from '@/components/CompletionModal';
@@ -133,7 +136,7 @@ const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, effectiveRole, updateUserProgress, completeCourse, openLoginModal } = useAuth();
-  const { getCourseById } = useCourses();
+  const { getCourseById, deleteCourse, updateCourse } = useCourses();
   const contentTopRef = useRef<HTMLDivElement>(null); // Ref for scrolling to content top
 
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
@@ -170,6 +173,12 @@ const CourseDetail: React.FC = () => {
   }>({ isOpen: false, type: 'module' });
 
   const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // --- Admin Course Editing State ---
+  const [isEditingCourse, setIsEditingCourse] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
 
   // Process Word HTML into Pages and Trivia
   useEffect(() => {
@@ -1121,53 +1130,131 @@ const CourseDetail: React.FC = () => {
           <div className="bg-card rounded-xl p-5 shadow-sm border border-border mb-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
-                  {course.title}
-                </h1>
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
-                    <Clock className="w-3 h-3 text-primary" />
-                    <span>{getDurationHours(course.duration)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
-                    <Award className="w-3 h-3 text-accent" />
-                    <span>{course.cpdPoints} CPD Points</span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
-                    <BookOpen className="w-3 h-3" />
-                    <span>{totalModules} Modules</span>
-                  </div>
-                  {isCourseComplete && (
-                    <div className="flex items-center gap-1 bg-success/10 text-success px-2 py-1 rounded-full font-medium">
-                      <CheckCircle className="w-3 h-3" />
-                      <span>Completed</span>
+                {isEditingCourse ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Course Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={isSavingCourse}
+                        onClick={async () => {
+                          if (!id || !editTitle.trim()) return;
+                          setIsSavingCourse(true);
+                          try {
+                            await updateCourse(id, { title: editTitle.trim(), description: editDescription.trim() });
+                            setIsEditingCourse(false);
+                          } catch (err) {
+                            alert('Failed to save course changes.');
+                          } finally {
+                            setIsSavingCourse(false);
+                          }
+                        }}
+                        className="btn-primary btn-sm inline-flex items-center gap-1.5 text-xs"
+                      >
+                        <Save className="w-3 h-3" />
+                        {isSavingCourse ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button
+                        onClick={() => setIsEditingCourse(false)}
+                        className="btn-secondary btn-sm inline-flex items-center gap-1.5 text-xs"
+                      >
+                        <X className="w-3 h-3" />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
+                      {course.title}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
+                        <Clock className="w-3 h-3 text-primary" />
+                        <span>{getDurationHours(course.duration)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
+                        <Award className="w-3 h-3 text-accent" />
+                        <span>{course.cpdPoints} CPD Points</span>
+                      </div>
+                      <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-full">
+                        <BookOpen className="w-3 h-3" />
+                        <span>{totalModules} Modules</span>
+                      </div>
+                      {isCourseComplete && (
+                        <div className="flex items-center gap-1 bg-success/10 text-success px-2 py-1 rounded-full font-medium">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>Completed</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Admin Edit Course button */}
-              {effectiveRole === 'admin' && (
-                <button
-                  onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
-                  className="btn-secondary btn-sm inline-flex items-center gap-1.5 text-xs"
-                >
-                  <Pencil className="w-3 h-3" />
-                  Edit Course
-                </button>
-              )}
-
-              {/* Compact progress bar */}
-              <div className="md:w-48 flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
+              {/* Admin actions + progress */}
+              <div className="flex items-center gap-3">
+                {effectiveRole === 'admin' && !isEditingCourse && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditTitle(course.title);
+                        setEditDescription(course.description || '');
+                        setIsEditingCourse(true);
+                      }}
+                      className="btn-secondary btn-sm inline-flex items-center gap-1.5 text-xs"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!id) return;
+                        if (window.confirm('Are you sure you want to permanently delete this course? This action cannot be undone.')) {
+                          try {
+                            await deleteCourse(id);
+                            navigate('/courses');
+                          } catch (err) {
+                            alert('Failed to delete course. You may not have permission.');
+                          }
+                        }
+                      }}
+                      className="btn-sm inline-flex items-center gap-1.5 text-xs text-destructive hover:bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-1.5 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </button>
                   </div>
+                )}
+
+                {/* Compact progress bar */}
+                <div className="md:w-48 flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-primary whitespace-nowrap">{progress}%</span>
                 </div>
-                <span className="text-sm font-bold text-primary whitespace-nowrap">{progress}%</span>
               </div>
             </div>
           </div>
